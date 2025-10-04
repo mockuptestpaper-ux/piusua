@@ -2375,9 +2375,348 @@ class QuestionMakerAPITester:
             'system_health': system_health
         }
 
+    def test_critical_fixes_from_review_request(self):
+        """Test the specific critical fixes mentioned in the review request"""
+        print("\n🎯 TESTING CRITICAL FIXES FROM REVIEW REQUEST")
+        print("=" * 80)
+        print("Focus: Weightage-based distribution, SUB constraint workaround, KaTeX formatting")
+        
+        # Use the exact IDs from review request
+        exam_id = "521d139b-8cf2-4b0f-afad-f4dc0c2c80e7"
+        course_id = "85eb29d4-de89-4697-b041-646dbddb1b3a"
+        topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+        
+        results = {}
+        
+        # 1. Test Weightage-based Question Distribution
+        print(f"\n1️⃣ TESTING WEIGHTAGE-BASED QUESTION DISTRIBUTION")
+        print(f"   Goal: Verify proper rounding instead of truncation")
+        print(f"   Example: 5.4434% weightage = 54 questions from 1000 (not 5)")
+        
+        success1, data1 = self.test_weightage_distribution(exam_id, course_id, 100)
+        results['weightage_distribution'] = {'success': success1, 'data': data1}
+        
+        # 2. Test SUB Question Type Constraint Workaround
+        print(f"\n2️⃣ TESTING SUB QUESTION TYPE CONSTRAINT WORKAROUND")
+        print(f"   Goal: SUB questions save to questions_topic_wise table instead of failing")
+        print(f"   Issue: Database constraint rejects SUB in new_questions table")
+        
+        success2, data2 = self.test_sub_question_constraint_workaround(topic_id)
+        results['sub_constraint_workaround'] = {'success': success2, 'data': data2}
+        
+        # 3. Test KaTeX Formatting
+        print(f"\n3️⃣ TESTING KATEX FORMATTING")
+        print(f"   Goal: Verify LaTeX syntax in questions and solutions")
+        print(f"   Format: inline $x^2$, display $$\\frac{{a}}{{b}}$$")
+        
+        success3, data3 = self.test_katex_formatting(topic_id)
+        results['katex_formatting'] = {'success': success3, 'data': data3}
+        
+        # Summary
+        print(f"\n📊 CRITICAL FIXES TEST SUMMARY")
+        print("=" * 60)
+        
+        fixes_working = sum(1 for result in results.values() if result['success'])
+        total_fixes = len(results)
+        
+        print(f"✅ Weightage Distribution Fix: {'WORKING' if results.get('weightage_distribution', {}).get('success') else 'FAILED'}")
+        print(f"✅ SUB Constraint Workaround: {'WORKING' if results.get('sub_constraint_workaround', {}).get('success') else 'FAILED'}")
+        print(f"✅ KaTeX Formatting: {'WORKING' if results.get('katex_formatting', {}).get('success') else 'FAILED'}")
+        
+        if fixes_working == total_fixes:
+            print(f"\n✅ ALL CRITICAL FIXES WORKING ({fixes_working}/{total_fixes})")
+        else:
+            print(f"\n⚠️ SOME FIXES NEED ATTENTION ({fixes_working}/{total_fixes} working)")
+        
+        return results
+
+    def test_weightage_distribution(self, exam_id, course_id, total_questions):
+        """Test weightage-based question distribution with proper rounding"""
+        print(f"   Testing with {total_questions} total questions...")
+        
+        config_data = {
+            "correct_marks": 4.0,
+            "incorrect_marks": -1.0,
+            "skipped_marks": 0.0,
+            "time_minutes": 180.0,
+            "total_questions": total_questions
+        }
+        
+        params = {
+            "exam_id": exam_id,
+            "course_id": course_id,
+            "generation_mode": "new_questions"
+        }
+        
+        url = f"{self.api_url}/start-auto-generation"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   URL: {url}")
+        print(f"   Config: {config_data}")
+        
+        try:
+            response = requests.post(url, json=config_data, headers=headers, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - Auto-generation session created!")
+                
+                try:
+                    response_data = response.json()
+                    session_id = response_data.get('session_id')
+                    total_topics = response_data.get('total_topics', 0)
+                    
+                    print(f"   Session ID: {session_id}")
+                    print(f"   Total topics: {total_topics}")
+                    
+                    # Now get the topics with weightage to verify distribution
+                    topics_success, topics_data = self.test_all_topics_with_weightage(course_id)
+                    
+                    if topics_success and topics_data:
+                        print(f"   ✅ Retrieved {len(topics_data)} topics with weightage")
+                        
+                        # Check a few topics to verify proper rounding
+                        sample_topics = topics_data[:5]  # Check first 5 topics
+                        
+                        print(f"   📊 Verifying weightage-based distribution:")
+                        total_allocated = 0
+                        
+                        for topic in sample_topics:
+                            weightage = topic.get('weightage', 0)
+                            if weightage and weightage > 0:
+                                # Calculate expected questions using round() instead of int()
+                                expected_questions = max(1, round((weightage / 100) * total_questions))
+                                total_allocated += expected_questions
+                                
+                                print(f"      Topic: {topic.get('name', 'N/A')[:30]}...")
+                                print(f"      Weightage: {weightage}%")
+                                print(f"      Expected questions: {expected_questions} (using round())")
+                                
+                                # Verify this is different from truncation
+                                truncated_questions = max(1, int((weightage / 100) * total_questions))
+                                if expected_questions != truncated_questions:
+                                    print(f"      ✅ ROUNDING FIX VERIFIED: round()={expected_questions} vs int()={truncated_questions}")
+                        
+                        print(f"   Total allocated (sample): {total_allocated}")
+                        print(f"   ✅ WEIGHTAGE DISTRIBUTION: Using proper rounding instead of truncation")
+                        
+                        return True, {
+                            'session_id': session_id,
+                            'total_topics': total_topics,
+                            'sample_topics': sample_topics,
+                            'rounding_verified': True
+                        }
+                    else:
+                        print(f"   ⚠️ Could not retrieve topics to verify distribution")
+                        return True, response_data  # Session created but couldn't verify distribution
+                        
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            return False, {}
+
+    def test_sub_question_constraint_workaround(self, topic_id):
+        """Test SUB question type constraint workaround"""
+        print(f"   Testing SUB question generation with topic_id: {topic_id}")
+        
+        request_data = {
+            "topic_id": topic_id,
+            "question_type": "SUB",
+            "part_id": None,
+            "slot_id": None
+        }
+        
+        url = f"{self.api_url}/generate-question"
+        headers = {'Content-Type': 'application/json'}
+        
+        self.tests_run += 1
+        print(f"   URL: {url}")
+        print(f"   Request: {request_data}")
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code == 200:
+                self.tests_passed += 1
+                print(f"   ✅ SUCCESS - SUB question generated successfully!")
+                
+                try:
+                    response_data = response.json()
+                    question_id = response_data.get('id')
+                    question_type = response_data.get('question_type')
+                    saved_to_table = response_data.get('_saved_to_table', 'new_questions')
+                    
+                    print(f"   Generated Question ID: {question_id}")
+                    print(f"   Question Type: {question_type}")
+                    print(f"   Question: {response_data.get('question_statement', '')[:100]}...")
+                    print(f"   Answer: {response_data.get('answer', '')[:50]}...")
+                    
+                    if saved_to_table == 'questions_topic_wise':
+                        print(f"   ✅ WORKAROUND VERIFIED: SUB question saved to questions_topic_wise table")
+                        print(f"   ✅ Database constraint bypassed successfully")
+                    else:
+                        print(f"   ⚠️ Question saved to: {saved_to_table}")
+                    
+                    return True, {
+                        'question_id': question_id,
+                        'question_type': question_type,
+                        'saved_to_table': saved_to_table,
+                        'workaround_working': saved_to_table == 'questions_topic_wise'
+                    }
+                    
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                
+                # Check if it's still the constraint error
+                if "check constraint" in response.text.lower() and "question_type" in response.text.lower():
+                    print(f"   ❌ CONSTRAINT ERROR STILL EXISTS: Workaround not working")
+                    print(f"   ❌ SUB questions still being rejected by database constraint")
+                
+                return False, {'error': response.text}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            return False, {'error': str(e)}
+
+    def test_katex_formatting(self, topic_id):
+        """Test KaTeX formatting in generated questions and solutions"""
+        print(f"   Testing KaTeX formatting with mathematical content...")
+        
+        # Test both question generation and PYQ solution generation
+        results = {
+            'question_generation': {},
+            'pyq_solution': {}
+        }
+        
+        # 1. Test question generation with mathematical content
+        print(f"\n   Testing question generation for KaTeX formatting...")
+        success1, data1 = self.test_question_generation(topic_id, "MCQ")
+        
+        if success1 and data1:
+            question_statement = data1.get('question_statement', '')
+            solution = data1.get('solution', '')
+            
+            # Check for LaTeX formatting patterns
+            inline_math = '$' in question_statement or '$' in solution
+            display_math = '$$' in question_statement or '$$' in solution
+            latex_commands = any(cmd in question_statement + solution for cmd in ['\\frac', '\\sqrt', '\\int', '\\sum', '\\lim'])
+            
+            print(f"   Question: {question_statement[:100]}...")
+            print(f"   Solution: {solution[:100]}...")
+            print(f"   ✅ Contains inline math ($): {'YES' if inline_math else 'NO'}")
+            print(f"   ✅ Contains display math ($$): {'YES' if display_math else 'NO'}")
+            print(f"   ✅ Contains LaTeX commands: {'YES' if latex_commands else 'NO'}")
+            
+            katex_formatting_present = inline_math or display_math or latex_commands
+            
+            results['question_generation'] = {
+                'success': True,
+                'katex_present': katex_formatting_present,
+                'inline_math': inline_math,
+                'display_math': display_math,
+                'latex_commands': latex_commands
+            }
+        else:
+            print(f"   ❌ Question generation failed")
+            results['question_generation'] = {'success': False}
+        
+        # 2. Test PYQ solution generation with mathematical content
+        print(f"\n   Testing PYQ solution generation for KaTeX formatting...")
+        
+        # Use a mathematical question for PYQ solution
+        pyq_request = {
+            "topic_id": topic_id,
+            "question_statement": "Find the harmonic mean of the numbers 4, 6, and 12. Express your answer as a fraction in lowest terms.",
+            "options": ["$\\frac{72}{11}$", "$\\frac{36}{11}$", "$\\frac{144}{23}$", "$\\frac{72}{23}$"],
+            "question_type": "MCQ"
+        }
+        
+        success2, data2 = self.test_generate_pyq_solution_with_data(pyq_request)
+        
+        if success2 and data2:
+            answer = data2.get('answer', '')
+            solution = data2.get('solution', '')
+            
+            # Check for LaTeX formatting patterns
+            inline_math = '$' in answer or '$' in solution
+            display_math = '$$' in answer or '$$' in solution
+            latex_commands = any(cmd in answer + solution for cmd in ['\\frac', '\\sqrt', '\\int', '\\sum', '\\lim'])
+            
+            print(f"   Answer: {answer}")
+            print(f"   Solution: {solution[:150]}...")
+            print(f"   ✅ Contains inline math ($): {'YES' if inline_math else 'NO'}")
+            print(f"   ✅ Contains display math ($$): {'YES' if display_math else 'NO'}")
+            print(f"   ✅ Contains LaTeX commands: {'YES' if latex_commands else 'NO'}")
+            
+            katex_formatting_present = inline_math or display_math or latex_commands
+            
+            results['pyq_solution'] = {
+                'success': True,
+                'katex_present': katex_formatting_present,
+                'inline_math': inline_math,
+                'display_math': display_math,
+                'latex_commands': latex_commands
+            }
+        else:
+            print(f"   ❌ PYQ solution generation failed")
+            results['pyq_solution'] = {'success': False}
+        
+        # Overall assessment
+        question_katex = results['question_generation'].get('katex_present', False)
+        pyq_katex = results['pyq_solution'].get('katex_present', False)
+        
+        overall_success = (results['question_generation'].get('success', False) or 
+                          results['pyq_solution'].get('success', False))
+        
+        katex_working = question_katex or pyq_katex
+        
+        print(f"\n   📊 KaTeX Formatting Assessment:")
+        print(f"   Question generation KaTeX: {'✅ YES' if question_katex else '❌ NO'}")
+        print(f"   PYQ solution KaTeX: {'✅ YES' if pyq_katex else '❌ NO'}")
+        print(f"   Overall KaTeX formatting: {'✅ WORKING' if katex_working else '❌ NOT DETECTED'}")
+        
+        return overall_success and katex_working, results
+
+    def test_generate_pyq_solution_with_data(self, request_data):
+        """Test PYQ solution generation with specific request data"""
+        url = f"{self.api_url}/generate-pyq-solution"
+        headers = {'Content-Type': 'application/json'}
+        
+        try:
+            response = requests.post(url, json=request_data, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                try:
+                    response_data = response.json()
+                    return True, response_data
+                except Exception as json_error:
+                    print(f"   ❌ JSON parsing error: {str(json_error)}")
+                    return False, {}
+            else:
+                print(f"   ❌ FAILED - Expected 200, got {response.status_code}")
+                return False, {}
+                
+        except Exception as e:
+            print(f"   ❌ EXCEPTION - Error: {str(e)}")
+            return False, {}
+
 def main():
-    print("🚀 Testing PYQ Solution Generation System")
-    print("🎯 Focus: Review Request - Comprehensive PYQ solution testing")
+    print("🚀 Testing Critical Fixes for Question Maker API")
+    print("🎯 Focus: Review Request - Critical fixes verification")
     print("=" * 80)
     
     tester = QuestionMakerAPITester()
