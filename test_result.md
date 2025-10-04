@@ -170,7 +170,7 @@ backend:
 
   - task: "SUB database constraint fix"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 3
     priority: "high"
@@ -191,6 +191,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "🎯 FOCUSED SUB CONSTRAINT WORKAROUND TEST COMPLETE: Tested POST /api/generate-question with question_type='SUB' and topic_id='7c583ed3-64bf-4fa0-bf20-058ac4b40737' as requested in review. RESULT: 500 error - 'Database constraint error for SUB questions. Primary table rejected due to constraint, fallback table also failed: insert or update on table \"questions_topic_wise\" violates foreign key constraint \"questions_topic_wise_question_id_fkey\"'. ROOT CAUSE IDENTIFIED: The workaround attempts to save SUB questions to questions_topic_wise table using question_id field, but this field has foreign key constraint requiring existing record in questions table. The workaround creates UUID for question_id but doesn't create corresponding questions table entry. SPECIFIC ISSUE: questions_topic_wise_question_id_fkey constraint violation. SOLUTION NEEDED: Either create questions table entry first, or modify field mapping to avoid foreign key constraint. The constraint workaround is implemented but has foreign key dependency issue."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ SUB CONSTRAINT WORKAROUND FIX VERIFIED: Tested POST /api/generate-question with question_type='SUB' and topic_id='7c583ed3-64bf-4fa0-bf20-058ac4b40737' as requested in final test. RESULT: 200 SUCCESS! Generated SUB question successfully with ID '2780e743-65ed-4088-b361-d5162c90ed2b'. ANALYSIS: The updated workaround now works correctly - SUB questions are being saved to the new_questions table without foreign key constraint violations. The fix successfully avoids the question_id field issues that were causing the foreign key constraint error. VERIFICATION: Question generated with proper LaTeX formatting, complete answer, and saved successfully. The constraint workaround is now working as intended."
 
   - task: "Cascading dropdown endpoints"
     implemented: true
