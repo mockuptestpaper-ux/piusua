@@ -1343,12 +1343,16 @@ Please respond in the following JSON format:
                 if request.question_type in ["SUB", "NAT"]:
                     # For SUB and NAT questions that fail constraint, save to questions_topic_wise table instead
                     try:
+                        # Get topic name for the questions_topic_wise table
+                        topic_name_result = supabase.table("topics").select("name").eq("id", request.topic_id).execute()
+                        topic_name = topic_name_result.data[0]["name"] if topic_name_result.data else "Unknown Topic"
+                        
                         # Modify the new_question structure for questions_topic_wise table
                         # Note: questions_topic_wise has different schema - no difficulty_level column
+                        # Skip question_id field to avoid foreign key constraint
                         question_for_topic_wise = {
-                            "question_id": new_question["id"],  # Use question_id field instead of id
                             "topic_id": new_question["topic_id"],
-                            "topic_name": new_question.get("topic_name", ""),
+                            "topic_name": topic_name,
                             "question_statement": new_question["question_statement"],
                             "question_type": new_question["question_type"],
                             "options": new_question["options"],
