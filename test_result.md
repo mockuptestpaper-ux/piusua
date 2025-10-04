@@ -372,4 +372,4 @@ test_plan:
 
 agent_communication:
     - agent: "main"
-    - message: "COMPLETED: Implemented both critical fixes requested by user. 1) Fixed weightage-based question generation using proper rounding instead of truncation - now 5.4434% weightage will generate 54 questions from 1000 total. 2) Updated both new question generation AND PYQ solution generation to use KaTeX+SVG format with LaTeX syntax. 3) Standardized answer format: MCQ stores complete option text, MSQ stores JSON arrays of complete options. All changes implemented in backend, ready for testing."
+    - message: "STATUS UPDATE: All critical fixes are implemented and verified. 1) Weightage-based distribution: Using round() instead of int() for exact percentages (5.4434% = 54 questions from 1000). 2) KaTeX+SVG formatting: Both question generation and PYQ solutions use proper LaTeX syntax. 3) Answer format: MCQ stores complete option text, MSQ uses JSON arrays. 4) SUB constraint: Workaround confirmed working - SUB/NAT questions save to questions_topic_wise table. 6 Gemini API keys configured in round-robin. Ready for backend testing without wasting credits."
