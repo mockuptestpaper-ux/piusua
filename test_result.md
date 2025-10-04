@@ -169,10 +169,10 @@ backend:
         - comment: "🎯 JSON SCHEMA IMPROVEMENTS LARGELY SUCCESSFUL! NAT generation now has 80% success rate (4/5 attempts) - MAJOR improvement from previous 0%. JSON parsing errors are mostly eliminated with structured JSON output schema. Generated NAT questions about Harmonic Progression with proper numerical answers (5, 26, 26.06, 34.615384615) and detailed solutions. One validation failure occurred but 4/5 attempts produced valid JSON responses. This represents significant progress from complete failure to mostly working state."
 
   - task: "SUB database constraint fix"
-    implemented: false
+    implemented: true
     working: false
     file: "/app/backend/server.py"
-    stuck_count: 2
+    stuck_count: 3
     priority: "high"
     needs_retesting: false
     status_history:
@@ -185,6 +185,9 @@ backend:
         - working: false
         - agent: "testing"
         - comment: "COMPREHENSIVE TESTING COMPLETE: Tested all 4 question types with topic_id '7c583ed3-64bf-4fa0-bf20-058ac4b40737'. RESULTS: MCQ ✅ SUCCESS (generates valid questions), MSQ ✅ SUCCESS (generates valid questions), NAT ❌ VALIDATION FAILURE (generates questions but fails validation rules), SUB ❌ DATABASE CONSTRAINT VIOLATION (Error: 'new row for relation new_questions violates check constraint new_questions_question_type_check'). ROOT CAUSE CONFIRMED: Database constraint 'new_questions_question_type_check' only allows ['MCQ', 'MSQ'] but rejects 'SUB' and potentially 'NAT'. SOLUTION REQUIRED: Update database schema constraint to include 'SUB' and 'NAT' as valid question_type values. Current working types: 2/4 (50% success rate)."
+        - working: false
+        - agent: "testing"
+        - comment: "❌ SUB CONSTRAINT WORKAROUND STILL FAILING: Tested POST /api/generate-question with question_type='SUB' and topic_id='7c583ed3-64bf-4fa0-bf20-058ac4b40737'. RESULT: 500 error with message 'Database constraint error for SUB questions. Primary table rejected due to constraint, fallback table also failed: Could not find the difficulty_level column of questions_topic_wise in the schema cache'. ANALYSIS: The workaround attempts to save SUB questions to questions_topic_wise table when new_questions table rejects them, but the fallback table has schema issues (missing difficulty_level column). The constraint workaround is implemented but not working due to schema mismatch between tables. RECOMMENDATION: Either fix questions_topic_wise table schema to match new_questions table, or update new_questions constraint to allow SUB question type."
 
   - task: "Cascading dropdown endpoints"
     implemented: true
