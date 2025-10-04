@@ -2725,10 +2725,28 @@ def main():
     print("\n1️⃣ Testing Basic API Connectivity...")
     tester.test_root_endpoint()
     
-    # Run comprehensive PYQ solution generation testing as requested
-    print("\n2️⃣ Running Comprehensive PYQ Solution Generation Testing...")
-    pyq_results = tester.test_pyq_solution_generation_comprehensive()
-    pyq_analysis = tester.analyze_pyq_solution_results(pyq_results)
+    # Run critical fixes testing as requested in review
+    print("\n2️⃣ Running Critical Fixes Testing...")
+    critical_results = tester.test_critical_fixes_from_review_request()
+    
+    # Test round-robin API key system
+    print(f"\n3️⃣ TESTING ROUND-ROBIN API KEY SYSTEM")
+    print(f"   Goal: Verify API key rotation and quota handling")
+    
+    # Test multiple requests to verify round-robin
+    topic_id = "7c583ed3-64bf-4fa0-bf20-058ac4b40737"
+    round_robin_successes = 0
+    
+    for i in range(3):  # Test 3 requests
+        print(f"\n   Round-Robin Test {i+1}/3:")
+        success, data = tester.test_question_generation(topic_id, "MSQ")
+        if success:
+            round_robin_successes += 1
+            print(f"   ✅ Request {i+1}: SUCCESS")
+        else:
+            print(f"   ❌ Request {i+1}: FAILED")
+    
+    print(f"\n   📊 Round-Robin Results: {round_robin_successes}/3 successful")
     
     # Print final summary
     print(f"\n📊 FINAL TEST SUMMARY:")
