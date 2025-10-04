@@ -351,15 +351,18 @@ test_plan:
 
   - task: "KaTeX + SVG formatting for questions and solutions"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
         - agent: "main"
         - comment: "IMPLEMENTED: Updated both question generation and PYQ solution prompts to use KaTeX/LaTeX formatting. Added specific LaTeX syntax requirements (inline math: $x^2$, display math: $$\\frac{a}{b}$$). Updated answer format requirements: MCQ returns complete option text, MSQ returns JSON array of option texts, NAT returns numerical values. Both new question generation and PYQ solutions now use consistent KaTeX formatting for mathematical expressions."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ KATEX FORMATTING VERIFIED: Tested both question generation and PYQ solution generation with mathematical content. QUESTION GENERATION: Generated MCQ question with proper LaTeX formatting - contains inline math ($), LaTeX commands (\\frac), and mathematical expressions. Example: 'Let $H_1, H_2, H_3$ be three harmonic means between $a$ and $b$'. PYQ SOLUTION GENERATION: Generated solution with proper LaTeX formatting - contains inline math ($), display math ($$), and LaTeX commands (\\frac). Example answer: '$\\frac{72}{11}$' and solution with proper mathematical notation. Both endpoints successfully use KaTeX/LaTeX syntax as required."
 
   - task: "Answer format standardization"
     implemented: true
