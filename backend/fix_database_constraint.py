@@ -46,8 +46,9 @@ def test_constraint_fix():
     """Test if we can now insert SUB questions"""
     try:
         # Try to insert a test SUB question
+        import uuid
         test_question = {
-            "id": "test-sub-question-id",
+            "id": str(uuid.uuid4()),
             "topic_id": "7c583ed3-64bf-4fa0-bf20-058ac4b40737",  # Using a known topic ID from test results
             "question_statement": "Test SUB question for constraint verification",
             "question_type": "SUB",
