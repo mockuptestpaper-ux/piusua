@@ -65,7 +65,7 @@ def test_constraint_fix():
         if result.data:
             print("SUCCESS: SUB question type constraint is fixed!")
             # Clean up - delete the test question
-            supabase.table("new_questions").delete().eq("id", "test-sub-question-id").execute()
+            supabase.table("new_questions").delete().eq("id", test_question["id"]).execute()
             return True
         else:
             print("FAILED: Could not insert SUB question")
