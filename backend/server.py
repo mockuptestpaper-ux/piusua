@@ -1344,17 +1344,22 @@ Please respond in the following JSON format:
                     # For SUB and NAT questions that fail constraint, save to questions_topic_wise table instead
                     try:
                         # Modify the new_question structure for questions_topic_wise table
+                        # Note: questions_topic_wise has different schema - no difficulty_level column
                         question_for_topic_wise = {
-                            "id": new_question["id"],
+                            "question_id": new_question["id"],  # Use question_id field instead of id
                             "topic_id": new_question["topic_id"],
+                            "topic_name": new_question.get("topic_name", ""),
                             "question_statement": new_question["question_statement"],
                             "question_type": new_question["question_type"],
                             "options": new_question["options"],
                             "answer": new_question["answer"],
                             "solution": new_question["solution"],
-                            "difficulty_level": new_question["difficulty_level"],
                             "created_at": new_question["created_at"],
-                            "updated_at": new_question["updated_at"]
+                            "updated_at": new_question["updated_at"],
+                            "is_primary": True,
+                            "confidence_score": 1.0,
+                            "answer_done": True,
+                            "solution_done": True
                         }
                         
                         result = supabase.table("questions_topic_wise").insert(question_for_topic_wise).execute()
