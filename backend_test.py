@@ -2755,38 +2755,50 @@ def main():
     print(f"   Tests Failed: {len(tester.failed_tests)}")
     print(f"   Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Specific review request summary
-    print(f"\n🎯 PYQ SOLUTION GENERATION TEST RESULTS:")
-    print(f"   System Health: {pyq_analysis.get('system_health', 0):.1f}%")
-    print(f"   PYQ Solution Success Rate: {pyq_analysis.get('pyq_solution_success_rate', 0):.1f}%")
-    print(f"   JSON Parsing Errors: {pyq_analysis.get('json_parsing_errors', 0)}")
-    print(f"   Working Components: {len(pyq_analysis.get('working_components', []))}")
-    print(f"   Critical Issues: {len(pyq_analysis.get('critical_issues', []))}")
+    # Critical fixes summary
+    print(f"\n🔧 CRITICAL FIXES STATUS:")
     
-    # Show critical issues
-    critical_issues = pyq_analysis.get('critical_issues', [])
-    if critical_issues:
-        print(f"\n❌ CRITICAL ISSUES FOUND:")
-        for i, issue in enumerate(critical_issues, 1):
-            print(f"   {i}. {issue}")
+    # Weightage Distribution
+    weightage_working = critical_results.get('weightage_distribution', {}).get('success', False)
+    print(f"   1. Weightage-based Distribution: {'✅ WORKING' if weightage_working else '❌ FAILED'}")
+    if weightage_working:
+        print(f"      - Uses round() instead of int() for proper percentages")
+        print(f"      - 5.4434% of 100 questions = 5 questions (rounded)")
     
-    # Show working components
-    working_components = pyq_analysis.get('working_components', [])
-    if working_components:
-        print(f"\n✅ WORKING COMPONENTS:")
-        for i, component in enumerate(working_components, 1):
-            print(f"   {i}. {component}")
+    # SUB Constraint Workaround
+    sub_working = critical_results.get('sub_constraint_workaround', {}).get('success', False)
+    print(f"   2. SUB Question Constraint Fix: {'✅ WORKING' if sub_working else '❌ FAILED'}")
+    if sub_working:
+        print(f"      - SUB questions save to questions_topic_wise table")
+        print(f"      - Database constraint violation avoided")
     
-    # Overall status
-    system_health = pyq_analysis.get('system_health', 0)
-    if system_health >= 80:
-        print(f"\n✅ PYQ SOLUTION SYSTEM: MOSTLY WORKING")
+    # KaTeX Formatting
+    katex_working = critical_results.get('katex_formatting', {}).get('success', False)
+    print(f"   3. KaTeX Formatting: {'✅ WORKING' if katex_working else '❌ FAILED'}")
+    if katex_working:
+        print(f"      - LaTeX syntax used in questions and solutions")
+        print(f"      - Inline math: $x^2$, Display math: $$\\frac{{a}}{{b}}$$")
+    
+    # Round-Robin System
+    round_robin_working = round_robin_successes >= 2
+    print(f"   4. Round-Robin API Keys: {'✅ WORKING' if round_robin_working else '❌ ISSUES'}")
+    print(f"      - {round_robin_successes}/3 requests successful")
+    
+    # Overall Assessment
+    fixes_working = sum([weightage_working, sub_working, katex_working, round_robin_working])
+    total_fixes = 4
+    
+    print(f"\n📊 OVERALL CRITICAL FIXES STATUS:")
+    print(f"   Working fixes: {fixes_working}/{total_fixes}")
+    
+    if fixes_working == total_fixes:
+        print(f"   ✅ ALL CRITICAL FIXES VERIFIED AND WORKING!")
         return 0
-    elif system_health >= 60:
-        print(f"\n⚠️ PYQ SOLUTION SYSTEM: PARTIALLY WORKING")
+    elif fixes_working >= 3:
+        print(f"   ⚠️ MOST FIXES WORKING - Minor issues remain")
         return 1
     else:
-        print(f"\n❌ PYQ SOLUTION SYSTEM: NEEDS MAJOR FIXES")
+        print(f"   ❌ MULTIPLE FIXES NEED ATTENTION")
         return 2
 
 if __name__ == "__main__":
